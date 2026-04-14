@@ -98,7 +98,7 @@ Due to different storage pool visibility across node groups, job data computed o
 
 Never use cold storage data directly for job. If cold storage data is needed, transfer it to hot storage first before using it for job.
 
-Large-scale data transfer operations should be performed on `data.hpc.sjtu.edu.cn` and `sydata.hpc.sjtu.edu.cn`.
+Large-scale data transfer operations should be performed on `data.hpc.sjtu.edu.cn` and `sydata.hpc.sjtu.edu.cn`. HPC has multiple cold storages, so before migrating data to cold storage, check the free space of these candidates, and select the cold storage with most free space as the write target.
 
 ## Resources
 
