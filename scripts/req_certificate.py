@@ -26,6 +26,25 @@ import urllib.error
 API_BASE_URL = "https://api.hpc.sjtu.edu.cn"
 
 
+class APIError(Exception):
+    """Base exception for API errors."""
+    def __init__(self, message: str, http_code: int):
+        super().__init__(message)
+        self.http_code = http_code
+
+
+def parse_error_response(e: urllib.error.HTTPError) -> tuple[str, bool]:
+    """
+    Parse error response from API.
+    Returns (error_message, is_internal_error).
+    - HTTP 500: internal error, body contains session ID and help info
+    - Other codes: rejection, body contains reason
+    """
+    body = e.read().decode("utf-8")
+    http_code = e.code
+    return body, http_code == 500
+
+
 def request_token(operator: str, password: str) -> str:
     """Request bearer token from HPC API."""
     url = f"{API_BASE_URL}/token"
@@ -54,8 +73,17 @@ def request_token(operator: str, password: str) -> str:
                 token = token[7:]
             return token
     except urllib.error.HTTPError as e:
-        error_msg = e.read().decode("utf-8")
-        raise Exception(f"Failed to get token: {e.code} - {error_msg}")
+        error_body, is_internal = parse_error_response(e)
+        if is_internal:
+            raise APIError(
+                f"获取Token失败: {error_body}",
+                e.code
+            )
+        else:
+            raise APIError(
+                f"获取Token被拒绝: {error_body}",
+                e.code
+            )
 
 
 def generate_key_pair(token: str, hpc_user: str) -> dict:
@@ -83,8 +111,17 @@ def generate_key_pair(token: str, hpc_user: str) -> dict:
             result = json.loads(response.read().decode("utf-8"))
             return result
     except urllib.error.HTTPError as e:
-        error_msg = e.read().decode("utf-8")
-        raise Exception(f"Failed to generate key pair: {e.code} - {error_msg}")
+        error_body, is_internal = parse_error_response(e)
+        if is_internal:
+            raise APIError(
+                f"生成密钥对失败: {error_body}",
+                e.code
+            )
+        else:
+            raise APIError(
+                f"生成密钥对被拒绝: {error_body}",
+                e.code
+            )
 
 
 def sign_cert(token: str, hpc_user: str, public_key: str, valid_time: int = 3600) -> str:
@@ -115,8 +152,17 @@ def sign_cert(token: str, hpc_user: str, public_key: str, valid_time: int = 3600
             cert = response.read().decode("utf-8")
             return cert
     except urllib.error.HTTPError as e:
-        error_msg = e.read().decode("utf-8")
-        raise Exception(f"Failed to sign certificate: {e.code} - {error_msg}")
+        error_body, is_internal = parse_error_response(e)
+        if is_internal:
+            raise APIError(
+                f"签名证书失败: {error_body}",
+                e.code
+            )
+        else:
+            raise APIError(
+                f"签名证书被拒绝: {error_body}",
+                e.code
+            )
 
 
 def save_files(output_path: str, private_key: str, public_key: str, certificate: str):
@@ -165,42 +211,33 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"Requesting SSH certificate for user: {args.username}")
-    print("Step 1: Authenticating to get bearer token...")
-
     try:
         # Step 1: Get token
         token = request_token(args.username, args.password)
-        print("  Token obtained successfully.")
 
         # Step 2: Generate key pair
-        print("Step 2: Generating SSH key pair...")
         key_pair = generate_key_pair(token, args.username)
         private_key = key_pair["private_key"]
         public_key = key_pair["public_key"]
-        print("  Key pair generated successfully.")
 
         # Step 3: Sign certificate
-        print("Step 3: Signing SSH certificate...")
-        print("  Note: This step requires two-factor authentication.")
-        print("  Please complete the authorization via JWB app or Email.")
         certificate = sign_cert(
             token,
             args.username,
             public_key,
             args.valid_time
         )
-        print("  Certificate signed successfully.")
 
         # Step 4: Save files
-        print("Step 4: Saving files...")
         save_files(args.output_path, private_key, public_key, certificate)
 
-        print("\nDone! You can now SSH to HPC entry nodes using:")
-        print(f"  ssh -i {args.output_path}/{os.listdir(args.output_path)[0].replace('.pub', '')} user@entry_node")
+        print(f"Done! SSH key and certificate have been stored into {args.output_path}")
 
+    except APIError as e:
+        print(f"{e}", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        print(f"未知错误: {e}", file=sys.stderr)
         sys.exit(1)
 
 

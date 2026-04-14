@@ -58,6 +58,9 @@ SSH login to entry nodes requires the user's passwordless certificate. Check if 
 1. **Notify user first**: Tell the user that requesting a certificate need their HPC account username and password, and will trigger two-factor authentication so they need to authorize via JWB APP (交我办) or Email.
 2. **Wait for confirmation**: Only proceed after the user confirms they understand and are ready to authorize. If user has not provide their username or password, continue to ask for the missing parts.
 3. **Execute with long timeout**: Run `req_certificate.py` with `timeout >= 600s` because the script will block waiting for user to complete two-factor authentication on another channel. This can take several minutes.
+4. **Handle errors**: After script execution, check the exit code. If non-zero, parse the error message from stderr and inform the user with clear details about what went wrong (internal error vs. rejection). 
+   - If the error message indicates "user have not set email or jAccount", **Direct the user** to read the platform documentation: https://docs.hpc.sjtu.edu.cn/accounts/security.html . Ask them to follow the instructions in the documentation to bind their second identity channel (jAccount or email). 
+   - if the error message indicates internal error, tell user the session ID in error message, suggest them to ask help from `hpc@sjtu.edu.cn` with this ID.
 
 ```bash
 scripts/req_certificate.py "user_name" "user_password" "output_path"
