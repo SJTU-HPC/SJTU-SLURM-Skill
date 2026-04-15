@@ -9,18 +9,20 @@ description: Log in to the SJTU HPC platform (also known as "交我算") as the 
 
 Use this skill to log in to the SJTU HPC (交我算) platform as the user, acting on their behalf to perform personal job queries, submissions, cancellations, and data management operations.
 
+General Principles:
+- **Risk-aware operations**: Deleting user data and interrupting running jobs are risky operations. Before performing any risky operation, always confirm with the user that they clearly understand the impact of the operation and agree to its execution.
+
 ## Quick Start
 
 1. Analyze user requirements and clarify any ambiguous parts by asking follow-up questions. Identify the node group/partition the user is interested in and the operation type to select the correct entry node.
 2. Ensure SSH keys and certificates are available in the workspace, which should be stored in `credentials` directory. If not, obtain the user's account credentials to request a new SSH certificate. Remind the user that requesting a certificate will trigger two-factor authentication.
-3. Use the SSH certificate to log in to the corresponding entry node based on the cluster and operation type. If two-factor authentication is required, remind the user to complete it through the appropriate channel.
-4. Execute the user's requested operations on the entry node.
+3. Use the SSH certificate to connect to the corresponding entry node based on the cluster and operation type, execute the user's requested operations on it.
 
 ## Entry Node Selection Rules
 
 Select the appropriate entry node based on the node group and operation type the user is interested in.
 
-Partitions belong to node groups. If the user does not explicitly specify a node group but provides a target partition, look up the corresponding node group from this table:
+HPC cluster has 3 node groups: pi, sy (思源) , kp (鲲鹏) . Partitions belong to node groups. If the user does not explicitly specify a node group but provides a target partition, look up the corresponding node group from this table:
 
 | partition    | node group |
 | ------------ | ---------- |
@@ -98,7 +100,7 @@ Due to different storage pool visibility across node groups, job data computed o
 
 Never use cold storage data directly for job. If cold storage data is needed, transfer it to hot storage first before using it for job.
 
-Large-scale data transfer operations should be performed on `data.hpc.sjtu.edu.cn` and `sydata.hpc.sjtu.edu.cn`. HPC has multiple cold storages, so before migrating data to cold storage, check the free space of these candidates, and select the cold storage with most free space as the write target.
+Large-scale data transfer operations should be performed on `data.hpc.sjtu.edu.cn` and `sydata.hpc.sjtu.edu.cn`. HPC has multiple cold storages, so before writing data to cold storage, check the free space of these candidates, and select the cold storage with most free space as the write target. If user asks about their data in cold storage and did not clearly specified which one, use the combined virtual filesystem `/union` .
 
 ## Resources
 
