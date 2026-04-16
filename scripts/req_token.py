@@ -7,14 +7,14 @@ which can be used for subsequent operations like key generation and
 certificate signing.
 
 Usage:
-    python req_token.py <username> <password> [--token-dir TOKEN_DIR]
+    python req_token.py <username> <password> [--workspace WORKSPACE]
 
 Arguments:
     username: HPC account username
     password: HPC account password
 
 Options:
-    --token-dir TOKEN_DIR  Directory to save the token file (default: ../credentials)
+    --workspace WORKSPACE  Absolute path to the agent's workspace (default: ~/.openclaw/workspace). Credentials will be stored in WORKSPACE/credentials.
 """
 
 import argparse
@@ -104,24 +104,26 @@ def main():
     )
     parser.add_argument("username", help="HPC account username")
     parser.add_argument("password", help="HPC account password")
+    # Default workspace path
+    default_workspace = os.path.expanduser("~/.openclaw/workspace")
+
     parser.add_argument(
-        "--token-dir",
-        default="../credentials",
-        help="Directory to save the token file (default: ../credentials)"
+        "--workspace",
+        default=default_workspace,
+        help=f"Absolute path to the agent's workspace (default: {default_workspace}). Credentials will be stored in WORKSPACE/credentials."
     )
 
     args = parser.parse_args()
 
-    # Resolve token_dir relative to script location
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    token_dir = os.path.join(script_dir, args.token_dir)
+    # Credentials are always stored in WORKSPACE/credentials
+    credentials_dir = os.path.join(args.workspace, "credentials")
 
     try:
         # Request token
         token = request_token(args.username, args.password)
 
         # Save token
-        token_path = save_token(token_dir, token)
+        token_path = save_token(credentials_dir, token)
 
         print(f"Token obtained and saved to {token_path}")
         print("Note: Keep this token secure. It can be used for subsequent API operations.")

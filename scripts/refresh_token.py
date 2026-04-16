@@ -7,10 +7,10 @@ A refreshed token can be used to extend the session without re-authenticating
 with username and password.
 
 Usage:
-    python refresh_token.py [--token-dir TOKEN_DIR]
+    python refresh_token.py [--workspace WORKSPACE]
 
 Options:
-    --token-dir TOKEN_DIR  Directory where the token file is stored (default: ../credentials)
+    --workspace WORKSPACE  Absolute path to the agent's workspace (default: ~/.openclaw/workspace). Credentials will be read from WORKSPACE/credentials.
 """
 
 import argparse
@@ -108,20 +108,22 @@ def main():
     parser = argparse.ArgumentParser(
         description="Refresh bearer token from SJTU HPC API"
     )
+    # Default workspace path
+    default_workspace = os.path.expanduser("~/.openclaw/workspace")
+
     parser.add_argument(
-        "--token-dir",
-        default="../credentials",
-        help="Directory where the token file is stored (default: ../credentials)"
+        "--workspace",
+        default=default_workspace,
+        help=f"Absolute path to the agent's workspace (default: {default_workspace}). Credentials will be read from WORKSPACE/credentials."
     )
 
     args = parser.parse_args()
 
-    # Resolve token_dir relative to script location
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    token_dir = os.path.join(script_dir, args.token_dir)
+    # Credentials are always stored in WORKSPACE/credentials
+    credentials_dir = os.path.join(args.workspace, "credentials")
 
     # Load existing token
-    current_token = load_token(token_dir)
+    current_token = load_token(credentials_dir)
     if not current_token:
         print(
             f"Error: No token found in {token_dir}. "
@@ -135,7 +137,7 @@ def main():
         new_token = refresh_token(current_token)
 
         # Save new token
-        token_path = save_token(token_dir, new_token)
+        token_path = save_token(credentials_dir, new_token)
 
         print(f"Token refreshed successfully and saved to {token_path}")
         print("Note: The old token is now invalid.")

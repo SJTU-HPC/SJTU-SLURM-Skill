@@ -7,13 +7,13 @@ This script performs the following steps using an existing bearer token:
 2. Sign the public key to get SSH certificate
 
 Usage:
-    python req_certificate.py <hpc_user> [--token-dir TOKEN_DIR] [--valid-time VALID_TIME]
+    python req_certificate.py <hpc_user> [--workspace WORKSPACE] [--valid-time VALID_TIME]
 
 Arguments:
     hpc_user: HPC username (the user who will use the SSH key)
 
 Options:
-    --token-dir TOKEN_DIR  Directory where token is stored (default: ../credentials)
+    --workspace WORKSPACE  Absolute path to the agent's workspace (default: ~/.openclaw/workspace). Credentials will be stored in WORKSPACE/credentials.
     --valid-time VALID_TIME  Certificate validity time in seconds (default: 3600)
 """
 
@@ -179,10 +179,13 @@ def main():
         description="Request SSH key and certificate from SJTU HPC API"
     )
     parser.add_argument("hpc_user", help="HPC username (the user who will use the SSH key)")
+    # Default workspace path
+    default_workspace = os.path.expanduser("~/.openclaw/workspace")
+
     parser.add_argument(
-        "--token-dir",
-        default="../credentials",
-        help="Directory where token is stored (default: ../credentials)"
+        "--workspace",
+        default=default_workspace,
+        help=f"Absolute path to the agent's workspace (default: {default_workspace}). Credentials will be stored in WORKSPACE/credentials."
     )
     parser.add_argument(
         "--valid-time",
@@ -193,16 +196,15 @@ def main():
 
     args = parser.parse_args()
 
-    # Resolve token_dir relative to script location
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    token_dir = os.path.join(script_dir, args.token_dir)
+    # Credentials are always stored in WORKSPACE/credentials
+    credentials_dir = os.path.join(args.workspace, "credentials")
 
-    # Use token_dir as output_path for SSH key/cert (same directory)
-    output_path = token_dir
+    # Use credentials_dir as output_path for SSH key/cert (same directory)
+    output_path = credentials_dir
 
     try:
         # Step 1: Load token
-        token = load_token(token_dir)
+        token = load_token(credentials_dir)
 
         # Step 2: Generate key pair
         key_pair = generate_key_pair(token, args.hpc_user)

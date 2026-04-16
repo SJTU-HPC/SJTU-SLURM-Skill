@@ -55,31 +55,31 @@ Then select the entry node according to this table:
 
 ## SSH Keys and Certificates
 
-SSH login to entry nodes requires the user's passwordless certificate. Check if SSH keys and certificates exist in the `credentials` directory under workspace. If not, follow these steps:
+SSH login to entry nodes requires the user's passwordless certificate. The agent should store all credentials (tokens, SSH keys, certificates) in the workspace's `credentials` directory (e.g., `/root/.openclaw/workspace/default/credentials`). Pass the `--workspace` argument to scripts to ensure credentials are stored in the correct location.
 
-### Ensure Token Availiable
+### Ensure Token Available
 
-Before requesting the certificate, ensure there is a valid token. Go through the following steps:
+Before requesting the certificate, ensure there is a valid token in the credentials directory. Go through the following steps:
 
-1. Check whether `hpc_token` file exists in the `credentials` directory under workspace. If it exists, goto step 2, otherwise goto step 3.
-2. Try to refresh the token with `scripts/refresh_token.py` . If success, then you have ensured a valid token and can safely skip the following steps. If the request is refused (which means the token has expired), then continue to step 3. If the request reports internal error, act according to the rules in [Error Handling section](#error-handling) .
+1. Check whether `hpc_token` file exists in the `credentials` directory under workspace (e.g., `/root/.openclaw/workspace/default/credentials`). If it exists, goto step 2, otherwise goto step 3.
+2. Try to refresh the token with `scripts/refresh_token.py --workspace "path_to_workspace"`. If success, then you have ensured a valid token and can safely skip the following steps. If the request is refused (which means the token has expired), then continue to step 3. If the request reports internal error, act according to the rules in [Error Handling section](#error-handling) .
 3. Tell the user you are going to request a new token, ask for their HPC username and password.
-4. Request token with `scripts/req_token.py` . It's calling format should like: 
+4. Request token with `scripts/req_token.py` :
 
 ```bash
-python scripts/req_token.py "username" "password"
+python scripts/req_token.py "username" "password" --workspace "path_to_workspace"
 ```
 
 The token will be saved as `hpc_token` in the `credentials` directory under workspace. If script failed, act according to the rules in [Error Handling section](#error-handling) .
 
-### Request SSH Certificate 
+### Request SSH Certificate
 
 Once you have a valid token, request the SSH certificate:
 
 1. **Ask for certificate owner**: If you have asked username when requesting token, directly use that username and skip the ask. Otherwise ask for user's HPC username.
-2. **Wait for confirmation**: Tell user that certificate request will trigger two-factor authentication so they need to authorize via JWB APP (交我办) or Email. **Only proceed after the user confirms they understand and are ready to authorize.**
-2. **Execute with long timeout**: Give user a prompt hint like "Start to request certificate, waiting for your two-factor authentication...". Meanwhile run `req_certificate.py <username>` with `timeout >= 600s` because the script will block waiting for user to complete two-factor authentication on another channel.
-3. **Handle errors**: After script execution, check the exit code. If non-zero, act according to the rules in [Error Handling section](#error-handling) .
+2. **Notify and proceed immediately**: Tell the user that requesting the certificate will trigger two-factor authentication via JWB APP (交我办) or Email, and ask them to authorize on that device. **Do NOT wait for the user's confirmation before proceeding** — immediately execute the certificate request script in the background while telling the user to check their device.
+3. **Execute with long timeout**: Give the user a prompt like "Requesting certificate now, please authorize on JWB App or Email..." and run `req_certificate.py <username> --workspace "path_to_workspace"` with `timeout >= 600s` because the script will block waiting for the user to complete two-factor authentication on another channel.
+4. **Handle errors**: After script execution, check the exit code. If non-zero, act according to the rules in [Error Handling section](#error-handling) .
 
 The SSH key and certificate will be saved to the `credentials` directory under workspace.
 
