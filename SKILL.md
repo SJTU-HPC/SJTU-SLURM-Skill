@@ -1,7 +1,14 @@
 ---
 name: sjtu-hpc
-version: 0.1.1
 description: Log in to the SJTU HPC platform (also known as "交我算") as the user to perform job queries, submissions, cancellations, and data management. Use this skill when the user requests operations related to HPC or "交我算".
+metadata:
+  {
+    "openclaw":
+      {
+        "emoji": "🦞",
+        "homepage": https://github.com/SJTU-HPC/SJTU-SLURM-Skill,
+      }
+  }
 ---
 
 # sjtu-hpc
@@ -13,7 +20,7 @@ Use this skill to log in to the SJTU HPC (交我算) platform as the user, actin
 General Principles:
 
 - **Risk-aware operations**: Deleting user's data and interrupting running jobs are risky operations. Before performing any risky operation, always confirm with the user that they clearly understand the impact of the operation and agree to its execution.
-- private credentials: All user's credential files (like SSH key, certificate, API token, etc...) should be stored in the `credentials` directory under workspace (e.g., `~/.openclaw/workspace/default/credentials`). **Do Not store user's password** , if you received any plain text attachment from user containing their password (usually stored in ` ~/.openclaw/media`) , delete it after you get a valid token.
+- private credentials: All user's credential files (like SSH key, certificate, API token, etc...) should be stored in the `credentials` directory under workspace (e.g., `~/.openclaw/workspace/default/credentials`). **Do Not store user's password** , if you received any attachment from user containing their password, delete it once you get a valid token.
 
 ## Quick Start
 
@@ -33,7 +40,7 @@ Before calling any HPC API, ensure there is a valid token in the credentials dir
 2. Try to refresh the token with `scripts/refresh_token.py --workspace "path_to_workspace"`. If success, then you have ensured a valid token and can safely skip the following steps. If the request is refused (which means the token has expired), then continue to step 3. If the request reports internal error, act according to the rules in [Error Handling section](#error-handling) .
 3. Tell the user you are going to request a new token, ask for their HPC username and password. To avoid password leak, advise user to upload a text file instead of providing passwords directly in the chat window.
 4. Request token with `python scripts/req_token.py "username" "password" --workspace "path_to_workspace"` . The token will be saved as `hpc_token` in the `credentials` directory under workspace. If script failed, act according to the rules in [Error Handling section](#error-handling) .
-5. If you got user's password from the text file uploaded by them, delete it now to avoid password leak.
+5. **Remove password file**: If you got user's password from any files, delete them now to avoid password leak. Never include the plain password in talk messages.
 
 ## HPC API
 

@@ -126,7 +126,7 @@ def main():
     current_token = load_token(credentials_dir)
     if not current_token:
         print(
-            f"Error: No token found in {token_dir}. "
+            f"Error: No token found in {credentials_dir}. "
             "Please run req_token.py first to obtain a token.",
             file=sys.stderr
         )
