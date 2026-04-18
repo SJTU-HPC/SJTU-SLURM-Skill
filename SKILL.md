@@ -37,10 +37,10 @@ General Principles:
 Before calling any HPC API, ensure there is a valid token in the credentials directory. Go through the following steps:
 
 1. Check whether `hpc_token` file exists in the `credentials` directory under workspace. If it exists, goto step 2, otherwise goto step 3.
-2. Try to refresh the token with `scripts/refresh_token.py --workspace "path_to_workspace"`. If success, then you have ensured a valid token and can safely skip the following steps. If the request is refused (which means the token has expired), then continue to step 3. If the request reports internal error, act according to the rules in [Error Handling section](#error-handling) .
+2. Try to refresh the token with `refresh_token.py --workspace "path_to_workspace"`. If success, then you have ensured a valid token and can safely skip the following steps. If the request is refused (which means the token has expired), then continue to step 3. If the request reports internal error, act according to the rules in [Error Handling section](#error-handling) .
 3. Tell the user you are going to request a new token and ask for their HPC username and password. To avoid password leak, advise user to upload a text file instead of providing passwords directly in the chat window.
-4. Call script to request a new token:
-   - If user uploaded file to provide password, request token with `python scripts/req_token.py "username" "password" --workspace "path_to_workspace" --textfile "uploaded_file_path"` so script can help to remove the file to prevent password leak.
+4. Call script to request a new token with `req_token.py` :
+   - If user uploaded file to provide password, call script with the format like: `req_token.py "username" "password" --workspace "path_to_workspace" --textfile "uploaded_file_path"`. So script can help to remove the file to prevent password leak.
    - Otherwise skip the `--textfile` option.
 
 The token will be saved as `hpc_token` in the `credentials` directory under workspace. If any script failed, act according to the rules in [Error Handling section](#error-handling) .
@@ -49,13 +49,14 @@ The token will be saved as `hpc_token` in the `credentials` directory under work
 
 Here are some HPC API path you can call when users want to know their storage quota usage or update their account:
 
-- `GET /quota`: query the storage quota data of user or its related group account.
-- `GET /user`: query user's account information.
+- `GET /user`: query user's information, including all the attributes defined by posixAccount and some addditional fields like jAccount, email, user type, etc.
 - `PATCH /user`: update some field of user's account, including password, binding Email/jAccount, preferred contact method.
+- `GET /quota`: Query the storage quota data of user or its related group account. Always call it with explict `name` parameter. If user's requirement didn't specify which `quota_type` them need, you should query with `quota_type=account` and `quota_type=user` seperately. The account name can be derived from user's home path, which can be query in `GET /user`. The parent dir of user‘s home is exactly its account name, for example:  `"home": "%H/home/acct-hpc/hpcrobot"` -> `account name: acct-hpc`.
 
 Only these tasks can be done through HPC API. **Do NOT try to use API for any other user requirements.**
 
-Before you call any API, you must consult the API's online documentation (https://api.hpc.sjtu.edu.cn/doc/index.html#/) to understand the calling conventions of the target API. Use the token in `credentials` directory if authorization is required. Ask for user's HPC name or group account if they are needed and has not been provided during the talk.
+Before you call any API, you must consult the API's online documentation (https://api.hpc.sjtu.edu.cn/doc/index.html#/) to understand the calling conventions of the target API. Use the token in `credentials` directory if authorization is required. Ask for user's HPC name if it is needed and has not been provided during the talk.
+
 There may be more paths in the documentation than what we listed here. Don't care, you should not need to call other paths.
 
 ## Entry Node Selection Rules
