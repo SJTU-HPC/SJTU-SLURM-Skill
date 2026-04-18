@@ -2,18 +2,19 @@
 """
 Request SSH key and certificate from SJTU HPC API.
 
-This script performs the following steps:
-1. Authenticate with HPC API to get a bearer token
-2. Generate SSH key pair using the token
-3. Sign the public key to get SSH certificate
+This script performs the following steps using an existing bearer token:
+1. Generate SSH key pair using the token
+2. Sign the public key to get SSH certificate
 
 Usage:
-    python req_certificate.py <username> <password> <output_path>
+    python req_certificate.py <hpc_user> [--workspace WORKSPACE] [--valid-time VALID_TIME]
 
 Arguments:
-    username: HPC account username (operator)
-    password: HPC account password
-    output_path: Directory to save the SSH key and certificate files
+    hpc_user: HPC username (the user who will use the SSH key)
+
+Options:
+    --workspace WORKSPACE  Absolute path to the agent's workspace (default: ~/.openclaw/workspace). Credentials will be stored in WORKSPACE/credentials.
+    --valid-time VALID_TIME  Certificate validity time in seconds (default: 3600)
 """
 
 import argparse
@@ -24,6 +25,7 @@ import urllib.request
 import urllib.error
 
 API_BASE_URL = "https://api.hpc.sjtu.edu.cn"
+TOKEN_FILENAME = "hpc_token"
 
 
 class APIError(Exception):
@@ -45,45 +47,22 @@ def parse_error_response(e: urllib.error.HTTPError) -> tuple[str, bool]:
     return body, http_code == 500
 
 
-def request_token(operator: str, password: str) -> str:
-    """Request bearer token from HPC API."""
-    url = f"{API_BASE_URL}/token"
-    payload = {
-        "domain": "pi",
-        "operator": operator,
-        "password": password
-    }
-
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Accept": "text/plain"
-        },
-        method="POST"
-    )
-
-    try:
-        with urllib.request.urlopen(req) as response:
-            token = response.read().decode("utf-8")
-            # Token format is "Bearer ..."
-            if token.startswith("Bearer "):
-                token = token[7:]
-            return token
-    except urllib.error.HTTPError as e:
-        error_body, is_internal = parse_error_response(e)
-        if is_internal:
-            raise APIError(
-                f"获取Token失败: {error_body}",
-                e.code
-            )
-        else:
-            raise APIError(
-                f"获取Token被拒绝: {error_body}",
-                e.code
-            )
+def load_token(token_dir: str) -> str:
+    """Load token from the token directory."""
+    token_path = os.path.join(token_dir, TOKEN_FILENAME)
+    if not os.path.exists(token_path):
+        raise APIError(
+            f"Token文件不存在: {token_path}。请先运行 req_token.py 获取token。",
+            http_code=404
+        )
+    with open(token_path, "r") as f:
+        token = f.read().strip()
+    if not token:
+        raise APIError(
+            f"Token文件为空: {token_path}。请先运行 req_token.py 获取token。",
+            http_code=400
+        )
+    return token
 
 
 def generate_key_pair(token: str, hpc_user: str) -> dict:
@@ -199,9 +178,15 @@ def main():
     parser = argparse.ArgumentParser(
         description="Request SSH key and certificate from SJTU HPC API"
     )
-    parser.add_argument("username", help="HPC account username (operator)")
-    parser.add_argument("password", help="HPC account password")
-    parser.add_argument("output_path", help="Directory to save SSH key and certificate")
+    parser.add_argument("hpc_user", help="HPC username (the user who will use the SSH key)")
+    # Default workspace path
+    default_workspace = os.path.expanduser("~/.openclaw/workspace")
+
+    parser.add_argument(
+        "--workspace",
+        default=default_workspace,
+        help=f"Absolute path to the agent's workspace (default: {default_workspace}). Credentials will be stored in WORKSPACE/credentials."
+    )
     parser.add_argument(
         "--valid-time",
         type=int,
@@ -211,27 +196,33 @@ def main():
 
     args = parser.parse_args()
 
+    # Credentials are always stored in WORKSPACE/credentials
+    credentials_dir = os.path.join(args.workspace, "credentials")
+
+    # Use credentials_dir as output_path for SSH key/cert (same directory)
+    output_path = credentials_dir
+
     try:
-        # Step 1: Get token
-        token = request_token(args.username, args.password)
+        # Step 1: Load token
+        token = load_token(credentials_dir)
 
         # Step 2: Generate key pair
-        key_pair = generate_key_pair(token, args.username)
+        key_pair = generate_key_pair(token, args.hpc_user)
         private_key = key_pair["private_key"]
         public_key = key_pair["public_key"]
 
         # Step 3: Sign certificate
         certificate = sign_cert(
             token,
-            args.username,
+            args.hpc_user,
             public_key,
             args.valid_time
         )
 
         # Step 4: Save files
-        save_files(args.output_path, private_key, public_key, certificate)
+        save_files(output_path, private_key, public_key, certificate)
 
-        print(f"Done! SSH key and certificate have been stored into {args.output_path}")
+        print(f"Done! SSH key and certificate have been stored into {output_path}")
 
     except APIError as e:
         print(f"{e}", file=sys.stderr)
