@@ -7,7 +7,7 @@ which can be used for subsequent operations like key generation and
 certificate signing.
 
 Usage:
-    python req_token.py <username> <password> [--workspace WORKSPACE]
+    python req_token.py <username> <password> [--workspace WORKSPACE] [--textfile TEXTFILE]
 
 Arguments:
     username: HPC account username
@@ -15,6 +15,7 @@ Arguments:
 
 Options:
     --workspace WORKSPACE  Absolute path to the agent's workspace (default: ~/.openclaw/workspace). Credentials will be stored in WORKSPACE/credentials.
+    --textfile TEXTFILE    Path to a file containing the password. If provided, the file will be deleted after the token is successfully saved to prevent password leak.
 """
 
 import argparse
@@ -26,6 +27,16 @@ import urllib.error
 
 API_BASE_URL = "https://api.hpc.sjtu.edu.cn"
 TOKEN_FILENAME = "hpc_token"
+
+
+def delete_file_if_exists(file_path: str) -> None:
+    """Delete the specified file if it exists."""
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+            print(f"Deleted password file: {file_path}")
+        except Exception as e:
+            print(f"Warning: Failed to delete password file {file_path}: {e}", file=sys.stderr)
 
 
 class APIError(Exception):
@@ -113,6 +124,12 @@ def main():
         help=f"Absolute path to the agent's workspace (default: {default_workspace}). Credentials will be stored in WORKSPACE/credentials."
     )
 
+    parser.add_argument(
+        "--textfile",
+        default=None,
+        help="Path to a file containing the password. If provided, the file will be deleted after the token is successfully saved to prevent password leak."
+    )
+
     args = parser.parse_args()
 
     # Credentials are always stored in WORKSPACE/credentials
@@ -124,6 +141,10 @@ def main():
 
         # Save token
         token_path = save_token(credentials_dir, token)
+
+        # Delete the password file if --textfile was specified
+        if args.textfile:
+            delete_file_if_exists(args.textfile)
 
         print(f"Token obtained and saved to {token_path}")
         print("Note: Keep this token secure. It can be used for subsequent API operations.")
