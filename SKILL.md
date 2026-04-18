@@ -28,6 +28,7 @@ General Principles:
 2. For each user request, analyze whether you need to log in to an HPC entry node to perform the operation remotely. You can ask more questions to clarify any ambiguous parts of the request.
    - If user wants to know its storage quota usage or update its account (like password, binding Email/jAccount, preferred contact method), then you can meet the requirement directly by calling HPC API with the token.
    - if user is talking about job or its data, then you have to select an entry node to do remote operation. In this case, take the following steps.
+   - if user want to get a passwordless certificate for SSH login, refer to [certificates section](#ssh-keys-and-certificates). Provide the private key and certificate files together to user after you have ensured they are vaild. Remind user of the security sensitivity of these files and advise user never use them in public environments.
 3. Ensure SSH keys and certificates are available in the workspace, which should be stored in `credentials` directory. If not, request a new SSH certificate for the user. Remind the user that requesting a certificate will trigger two-factor authentication.
 4. For each user request need remote operation, identify the node group/partition the user is interested in and the operation type to select the correct entry node.
 5. Use the SSH certificate to connect to the corresponding entry node based on the cluster and operation type, execute the user's requested operations on it.
