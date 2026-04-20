@@ -50,15 +50,22 @@ The token will be saved as `hpc_token` in the `credentials` directory under work
 
 Here are some HPC API path you can call when users want to know their storage quota usage or update their account:
 
-- `GET /user`: query user's information, including all the attributes defined by posixAccount and some addditional fields like jAccount, email, user type, etc.
-- `PATCH /user`: update some field of user's account, including password, binding Email/jAccount, preferred contact method.
-- `GET /quota`: Query the storage quota data of user or its related group account. Always call it with explict `name` parameter. If user's requirement didn't specify which `quota_type` them need, you should query with `quota_type=account` and `quota_type=user` seperately. The account name can be derived from user's home path, which can be query in `GET /user`. The parent dir of user‘s home is exactly its account name, for example:  `"home": "%H/home/acct-hpc/hpcrobot"` -> `account name: acct-hpc`.
+- `GET /user`: query user's information.
+  - Response will includ all the attributes defined by posixAccount and some addditional fields like jAccount, email, user type, etc.
+  - CURL example: `curl -L 'https://api.hpc.sjtu.edu.cn/user?name=userA&domain=pi' --header 'Authorization: Bearer ***'`
+- `PATCH /user`: update user's information.
+  - Only password, Email/jAccount, preferred contact method can be updated by user itself.
+  - Update request will trigger two-factor authentication via JWB APP (交我办) or Email. Ask user whether it have been prepared to do the authentication before you send the request.
+  - Consult the [online documentation](https://api.hpc.sjtu.edu.cn/doc/index.html#/) to understand the calling conventions of this API.
+- `GET /quota`: Query the storage quota data of user or its related group account.
+  - Call this API does not need authorization.
+  - Always call it with explict `name` parameter.
+  - If user's requirement didn't specify which `quota_type` them need, you should query with `quota_type=account` and `quota_type=user` seperately. The account name can be derived from user's home path, which can be query in `GET /user`. The parent dir of user‘s home is exactly its account name, for example:  `"home": "%H/home/acct-hpc/hpcrobot"` -> `account name: acct-hpc`.
+  - CURL example: `curl -L 'https://api.hpc.sjtu.edu.cn/quota?quota_type=account&name=acct-example'`
 
 Only these tasks can be done through HPC API. **Do NOT try to use API for any other user requirements.**
 
-Before you call any API, you must consult the API's online documentation (https://api.hpc.sjtu.edu.cn/doc/index.html#/) to understand the calling conventions of the target API. Use the token in `credentials` directory if authorization is required. Ask for user's HPC name if it is needed and has not been provided during the talk.
-
-There may be more paths in the documentation than what we listed here. Don't care, you should not need to call other paths.
+Use the token in `credentials` directory if authorization is required. Ask for user's HPC name if it is needed and has not been provided during the talk.
 
 ## Entry Node Selection Rules
 
@@ -126,7 +133,7 @@ Due to different storage pool visibility across node groups, job data computed o
 
 Never use cold storage data directly for job. If cold storage data is needed, transfer it to hot storage first before using it for job.
 
-Large-scale data transfer operations should be performed on `data.hpc.sjtu.edu.cn` and `sydata.hpc.sjtu.edu.cn`. HPC has multiple cold storages, so before writing data to cold storage, check the free space of these candidates, and select the cold storage with most free space as the write target. If user asks about their data in cold storage and did not clearly specified which one, use the combined virtual filesystem `/union` .
+Large-scale data transfer operations should be performed on `data.hpc.sjtu.edu.cn` and `sydata.hpc.sjtu.edu.cn`. To aviod connection lost, wrap the remote transfer operation on data nodes with tmux. HPC has multiple cold storages, so before writing data to cold storage, check the free space of these candidates, and select the cold storage with most free space as the write target. If user asks about their data in cold storage and did not clearly specified which one, use the combined virtual filesystem `/union` .
 
 ## Resources
 
