@@ -1,13 +1,13 @@
 name: Publish Skill to ClawHub
 
 on:
-  push:
-    tags:
-      - 'v*' # 仅在推送版本号 Tag 时触发发布
+  release:
+    types: [published]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    if: github.event.release.target_commitish == 'master'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
